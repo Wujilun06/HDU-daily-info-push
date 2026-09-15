@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">每日信息整合</string>
+    <!-- 改成你电脑 serve.py 的局域网/公网地址，例如 http://192.168.1.10:8080/index.html -->
+    <string name="start_url">https://example.com/index.html</string>
+</resources>

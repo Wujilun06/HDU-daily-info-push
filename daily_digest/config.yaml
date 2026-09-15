@@ -1,0 +1,218 @@
+# ============================================================
+# 每日信息整合推送 —— 配置文件
+# 修改此文件即可增删监控源、调整分类、接入大模型。
+# ============================================================
+
+settings:
+  timezone: "Asia/Shanghai"
+  site_title: "每日信息整合"
+  lookback_days: 120          # 首次回填窗口(天)；仅展示近 120 天内发布的文章
+  output_dir: "output"        # 生成网页的目录（相对本文件）
+  run_times: ["08:00", "20:00"]   # scheduler.py 进程内定时运行的时刻（HH:MM）
+
+# ---------- 分类规则（按顺序匹配，命中第一个即归类）----------
+# keywords 为空表示“兜底类”，所有未命中其它类的文章归入此类。
+categories:
+  # 分类直接对应官网板块（各 website_html 源已声明 category，按板块定类）
+  - name: "通知公告"
+    keywords: []
+  - name: "学院新闻"
+    keywords: []
+  - name: "本科教学"
+    keywords: []
+  - name: "研究生教育"
+    keywords: []
+  - name: "招生就业"
+    keywords: []
+  - name: "党建思政"
+    keywords: []
+  - name: "科研信息"
+    keywords: []
+  - name: "学生工作"
+    keywords: []
+  - name: "公众号推文"
+    keywords: []
+  - name: "其他"
+    keywords: []
+
+# ---------- 大模型摘要（可选）----------
+# enabled=false 或 api_key 为空时，自动使用“抽取式摘要”兜底（免费离线）。
+# provider 支持任意 OpenAI 兼容接口（含各大模型厂商的兼容端点）。
+llm:
+  enabled: false
+  base_url: "https://api.openai.com/v1"
+  api_key: ""                 # 填入你的 key；留空即走兜底
+  model: "gpt-4o-mini"
+  timeout: 30
+
+# ---------- 信息源 ----------
+# 每个源可单独 enabled: true/false 开关。
+# site 字段用于网页“来源”展示（站点/公众号级），区别于板块分类(category)。
+sources:
+  # ===== 杭电计算机学院官网（各板块列表页，自动按板块定类）=====
+  - id: "hdu_tzgg"
+    name: "通知公告"
+    site: "杭电计算机学院官网"
+    type: "website_html"
+    url: "https://cs.hdu.edu.cn/6738/list.htm"
+    base: "https://cs.hdu.edu.cn/"
+    category: "通知公告"
+    max_items: 15
+    enabled: true
+
+  - id: "hdu_xyxw"
+    name: "学院新闻"
+    site: "杭电计算机学院官网"
+    type: "website_html"
+    url: "https://cs.hdu.edu.cn/6739/list.htm"
+    base: "https://cs.hdu.edu.cn/"
+    category: "学院新闻"
+    max_items: 15
+    enabled: true
+
+  - id: "hdu_bk"
+    name: "本科教学"
+    site: "杭电计算机学院官网"
+    type: "website_html"
+    url: "https://cs.hdu.edu.cn/6729/list.htm"
+    base: "https://cs.hdu.edu.cn/"
+    category: "本科教学"
+    max_items: 15
+    enabled: true
+
+  - id: "hdu_yjs"
+    name: "研究生教育"
+    site: "杭电计算机学院官网"
+    type: "website_html"
+    url: "https://cs.hdu.edu.cn/6730/list.htm"
+    base: "https://cs.hdu.edu.cn/"
+    category: "研究生教育"
+    max_items: 15
+    enabled: true
+
+  - id: "hdu_zsjy"
+    name: "招生就业"
+    site: "杭电计算机学院官网"
+    type: "website_html"
+    url: "https://cs.hdu.edu.cn/6798/list.htm"   # 招生就业落地页无文章列表，改用“本科招生”列表页
+    base: "https://cs.hdu.edu.cn/"
+    category: "招生就业"
+    max_items: 15
+    enabled: true
+
+  - id: "hdu_dj"
+    name: "党建思政"
+    site: "杭电计算机学院官网"
+    type: "website_html"
+    url: "https://cs.hdu.edu.cn/6733/list.htm"
+    base: "https://cs.hdu.edu.cn/"
+    category: "党建思政"
+    max_items: 15
+    enabled: true
+
+  - id: "hdu_ky"
+    name: "科研信息"
+    site: "杭电计算机学院官网"
+    type: "website_html"
+    url: "https://cs.hdu.edu.cn/6777/list.htm"
+    base: "https://cs.hdu.edu.cn/"
+    category: "科研信息"
+    max_items: 15
+    enabled: true
+
+  - id: "hdu_xsgz"
+    name: "学生工作"
+    site: "杭电计算机学院官网"
+    type: "website_html"
+    url: "https://cs.hdu.edu.cn/6788/list.htm"
+    base: "https://cs.hdu.edu.cn/"
+    category: "学生工作"
+    max_items: 15
+    enabled: true
+
+  # ============================================================
+  # 微信公众号源（微信读书通道：标题 + 原文链接 + 日期）
+  # 前置：在 daily_digest/ 目录运行一次
+  #        python wechat_weread.py login
+  #      用手机微信扫码，登录态自动存到 wechat_weread_cookies.json
+  # 启用每个源只需把 mp_id 填成「该号在微信读书里的 MP_WXS_xxxx」：
+  #   - 在微信读书 APP/网页 打开该公众号 → 分享/复制链接 → 链接里含 MP_WXS_xxxx
+  #   - 或把分享链接发给 AI，由它自动提取 mp_id
+  # 填好后下一次运行即自动抓取「标题+链接」。登录态通常可维持数周，
+  # 失效时重跑 login 即可；接口偶发 -2041 风控会自动退避/浏览器兜底。
+  # ============================================================
+  - id: "wx_hdu_helper"
+    name: "杭电助手"
+    site: "微信公众号"
+    type: "weread"
+    mp_id: "MP_WXS_2394490021"   # 已从分享链接提取
+    category: "公众号推文"
+    max_pages: 3
+    enabled: true
+
+  - id: "wx_qc_hdu_2class"
+    name: "青春杭电第二课堂"
+    site: "微信公众号"
+    type: "weread"
+    mp_id: "MP_WXS_3920389119"   # 已从分享链接提取
+    category: "公众号推文"
+    max_pages: 3
+    enabled: true
+
+  - id: "wx_hdu_tilian"
+    name: "杭电体联"
+    site: "微信公众号"
+    type: "weread"
+    mp_id: "MP_WXS_3073029421"   # 已从分享链接提取
+    category: "公众号推文"
+    max_pages: 3
+    enabled: true
+
+  - id: "wx_qingchun_hdu"
+    name: "青春杭电"
+    site: "微信公众号"
+    type: "weread"
+    mp_id: "MP_WXS_399011308"   # 已从分享链接提取（9位，待API验证）
+    category: "公众号推文"
+    max_pages: 3
+    enabled: true
+
+  - id: "wx_hdu_official"
+    name: "杭州电子科技大学"
+    site: "微信公众号"
+    type: "weread"
+    mp_id: "MP_WXS_2390108099"   # 已从分享链接提取
+    category: "公众号推文"
+    max_pages: 3
+    enabled: true
+
+  - id: "wx_hdu_cs"
+    name: "杭电计算机"
+    site: "微信公众号"
+    type: "weread"
+    mp_id: "MP_WXS_3289526406"   # 已从分享链接提取
+    category: "公众号推文"
+    max_pages: 3
+    enabled: true
+
+  - id: "wx_hdu_lib"
+    name: "杭电图书馆"
+    site: "微信公众号"
+    type: "weread"
+    mp_id: "MP_WXS_3248232042"   # 已从分享链接提取并验证
+    category: "公众号推文"
+    max_pages: 3
+    enabled: true
+
+  - id: "wx_zjks"
+    name: "浙江考试"
+    site: "微信公众号"
+    type: "weread"
+    mp_id: "MP_WXS_3248085080"   # 已从分享链接提取
+    category: "公众号推文"
+    max_pages: 3
+    enabled: true
+
+  # 注：杭州电子科技大学计算机青协 在微信读书未收录，已排除（无需配置源）。
+  # 若日后需要，可在微信读书能搜到该号后补一个 weread 源。
+

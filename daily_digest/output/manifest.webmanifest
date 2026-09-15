@@ -1,0 +1,9 @@
+{
+  "name": "每日信息整合",
+  "short_name": "信息整合",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#2563eb",
+  "description": "每日信息整合推送"
+}
