@@ -86,7 +86,15 @@ def run(cfg, demo=False):
         a["title"] = s["title"] or a.get("title") or "(无标题)"
         a["summary"] = s["summary"]
         pub = a.get("published")
-        a["published_str"] = pub.strftime("%Y-%m-%d %H:%M") if pub else ""
+        if pub:
+            # 网站列表页常只给日期、不给时间，解析后时间为 00:00:00。
+            # 此时只显示日期，避免“所有文章都在 00:00 发布”的误导。
+            if pub.hour == 0 and pub.minute == 0:
+                a["published_str"] = pub.strftime("%Y-%m-%d")
+            else:
+                a["published_str"] = pub.strftime("%Y-%m-%d %H:%M")
+        else:
+            a["published_str"] = ""
 
     new_articles.sort(
         key=lambda x: x.get("published") or datetime.min,
