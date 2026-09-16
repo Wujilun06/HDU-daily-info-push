@@ -4,6 +4,7 @@ import re
 import requests
 
 from content_extract import fetch_html, html_to_text, extract_title
+from private_config import get_llm_api_key
 
 
 def _extractive_summary(text, max_chars=160):
@@ -32,7 +33,7 @@ def _llm_summary(text, cfg):
         r = requests.post(
             cfg["base_url"].rstrip("/") + "/chat/completions",
             headers={
-                "Authorization": f"Bearer {cfg['api_key']}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
             json={

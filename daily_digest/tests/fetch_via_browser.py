@@ -10,7 +10,9 @@ import sys
 from playwright.sync_api import sync_playwright
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-COOKIE_FILE = os.path.join(BASE, "wechat_weread_cookies.json")
+sys.path.insert(0, BASE)  # 让同目录的 private_config 可被导入
+from private_config import get_weread_cookies
+
 MP_ID = sys.argv[1] if len(sys.argv) > 1 else "MP_WXS_3248232042"
 SHARE = ("https://weread.qq.com/book-detail?type=1&senderVid=937812177"
          "&v=33d42e0224d505f5758535f333234383233323034326ed"
@@ -18,8 +20,9 @@ SHARE = ("https://weread.qq.com/book-detail?type=1&senderVid=937812177"
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-with open(COOKIE_FILE, encoding="utf-8") as f:
-    cookies = json.load(f).get("cookies", [])
+cookies = get_weread_cookies()
+if not cookies:
+    raise SystemExit("private_config.json 中无微信读书登录态，请先运行 python wechat_weread.py login")
 
 
 def main():

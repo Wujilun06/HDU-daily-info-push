@@ -8,25 +8,31 @@
 
 ## ⚠️ 隐私与配置说明（使用前必读）
 
-本仓库**曾**包含部分隐私 / 敏感内容，已在提交历史中移除并强制推送清理。**以下内容不会出现在仓库中，也不会被自动同步**，请在使用前自行在本地补齐：
+本项目采用「**单一隐私文件**」约定：所有隐私内容（微信读书登录态、大模型 API Key）
+都集中存放在仓库根目录的 **`private_config.json`** 中，**该文件已被 `.gitignore`
+忽略，不会进入任何仓库、也不会被自动同步**。所有需要隐私的步骤都从这一份文件读取，
+不再有零散的 cookie / key 文件。
 
-### 1. 已从仓库移除的隐私内容
-- `daily_digest/wechat_weread_cookies.json`：微信读书登录态凭证（含 `wr_skey` 会话密钥）。**切勿提交到任何仓库。**
-- `daily_digest/weread_login_qr.png` / `weread_login_page.png`：微信读书登录二维码与页面截图。
-- `daily_digest/*.txt` 运行日志（含本机用户路径、微信 `vid` 等）：`login_log.txt`、`run_log*.txt`、`run_retry*.txt`、`pip_install_log.txt`、`pw_install_log.txt`、`retry_log.txt`、`manual_links.txt`。
-- `.workbuddy/` 工作日志（含本机路径与账号信息）。
-- `wechat_rss/we-mp-rss/docker-compose.yml`：含部署用的数据库 / 服务密码，**已在本地保留、未入库**。
+### 1. 项目需要哪些隐私内容
+- **微信读书登录态**（用于抓取微信公众号文章）：运行
+  `python daily_digest/wechat_weread.py login` 用手机微信扫码，
+  登录态会自动写入 `private_config.json` 的 `weread_cookies` 字段。
+- **大模型 API Key**（可选，用于摘要）：把你的 Key 填进 `private_config.json`
+  的 `llm_api_key` 字段。**不填则自动使用免费离线摘要**。
 
-### 2. 使用前需要自行补齐（不纳入版本控制）
-- **大模型 API Key**：编辑 `daily_digest/config.yaml` 中的 `llm.api_key`，填入你自己的 Key（仓库内该字段为空）。
-- **微信读书登录态**：运行 `daily_digest/cookie_helper.py` 或按项目方式导出你本人的 `wechat_weread_cookies.json` 放到 `daily_digest/` 下（**不要提交**）。
-- **微信源配置**：将 `config.yaml` 中的 `mp_id` 列表替换为你自己要抓取的公众号（原提交中的部分 ID 属于个人订阅源）。
-- **部署密钥（可选）**：若部署 `wechat_rss`，在本地 `docker-compose.yml` 中填写数据库密码等服务密钥，并确保该文件已被 `.gitignore` 忽略。
+### 2. 如何准备 private_config.json
+1. 复制模板：`cp private_config.example.json private_config.json`
+2. （可选）在 `private_config.json` 填入 `llm_api_key`；
+3. 运行 `python daily_digest/wechat_weread.py login` 完成微信读书扫码登录
+   （自动写入 `weread_cookies`）。
+
+> 没有 `private_config.json` 也能跑演示模式：`python daily_digest/main.py --demo`；
+> 但真实抓取公众号需要其中存有微信读书登录态。
 
 ### 3. 安全建议（通用）
-- 任何含 token、密码、Cookie、私钥的文件都加入 `.gitignore`，绝不要 `git add`。
+- `private_config.json` 已在 `.gitignore` 中，绝不要 `git add`。
 - 推送前用 `git status` 确认无敏感文件被跟踪。
-- 若曾把密钥误提交，立即作废对应凭证（如退出登录），并改写历史后强制推送。
+- 若曾把密钥误提交，立即作废对应凭证并改写历史后强制推送。
 
 ---
 

@@ -46,7 +46,12 @@ import urllib.request
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-COOKIE_FILE = os.path.join(BASE_DIR, "wechat_weread_cookies.json")
+
+# 隐私统一从 private_config.json 读取（该文件已被 .gitignore 忽略）
+from private_config import (
+    load_private_config, save_private_config,
+    get_weread_cookies, get_weread_vid,
+)
 
 SEARCH_URL = "https://weread.qq.com/web/search/global"
 ARTICLES_URL = "https://weread.qq.com/web/mp/articles"
@@ -61,33 +66,32 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 # --------------------------------------------------------------------------
 # 登录态读写
 # --------------------------------------------------------------------------
-def load_login(cookie_file=COOKIE_FILE):
-    """读取登录态，返回 (cookie_str, vid, 描述)。"""
-    if not os.path.exists(cookie_file):
-        return "", "", f"文件不存在: {cookie_file}"
-    try:
-        with open(cookie_file, encoding="utf-8") as f:
-            data = json.load(f)
-    except (json.JSONDecodeError, OSError) as e:
-        return "", "", f"读取失败: {e}"
-    raw = data.get("raw") or "; ".join(
-        f"{c['name']}={c['value']}" for c in data.get("cookies", []))
-    return raw, data.get("vid", ""), f"已保存于 {data.get('saved_at', '?')}"
+def load_login():
+    """从 private_config.json 读取微信读书登录态，返回 (cookie_str, vid, 描述)。"""
+    data = load_private_config()
+    cookies = data.get("weread_cookies") or []
+    vid = data.get("weread_vid", "")
+    if not cookies:
+        raw = data.get("weread_cookie_raw", "")
+        if not raw:
+            return "", "", "private_config.json 中无微信读书登录态（请先运行 login）"
+        return raw, vid, "来自 private_config.json（raw 字符串备份）"
+    raw = "; ".join(f"{c['name']}={c['value']}" for c in cookies)
+    return raw, vid, f"已保存于 {data.get('weread_saved_at', '?')}"
 
 
-def save_login(cookies, cookie_file=COOKIE_FILE):
+def save_login(cookies):
+    """把微信读书登录态写入 private_config.json（合并到既有字段，不覆盖 llm_api_key 等）。"""
     vid = ""
     for c in cookies:
         if c.get("name") in ("wr_vid", "vid"):
             vid = c.get("value", "")
-    payload = {
-        "saved_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "vid": vid,
-        "cookies": cookies,
-        "raw": "; ".join(f"{c['name']}={c['value']}" for c in cookies),
-    }
-    with open(cookie_file, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+    data = load_private_config()
+    data["weread_cookies"] = cookies
+    data["weread_vid"] = vid
+    data["weread_saved_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    data["weread_cookie_raw"] = "; ".join(f"{c['name']}={c['value']}" for c in cookies)
+    save_private_config(data)
     return vid
 
 
@@ -182,21 +186,21 @@ def resolve_mp(keyword, cookie="", count=20):
     return parse_search_mp(_open(url, cookie))
 
 
-def fetch_articles_playwright(mp_id, cookie_file=COOKIE_FILE, max_pages=3,
+def fetch_articles_playwright(mp_id, max_pages=3,
                               page_interval=1.0, cutoff_date=None):
     """浏览器同源 fetch 兜底：用真实 Chromium 带登录态请求 /web/mp/articles。
 
     urllib 请求易被 -2041 风控；浏览器发出的请求带完整会话与官方指纹，
     冷却后通常不被风控。仅在 urllib 取数失败(-2041)时调用。
+    登录态从 private_config.json 读取。
     """
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
         return [], "未安装 Playwright（pip install playwright && playwright install chromium）"
-    if not os.path.exists(cookie_file):
-        return [], f"登录态文件不存在: {cookie_file}"
-    with open(cookie_file, encoding="utf-8") as f:
-        cookies = json.load(f).get("cookies", [])
+    cookies = get_weread_cookies()
+    if not cookies:
+        return [], "private_config.json 中无微信读书登录态（请先运行 login）"
     if not mp_id:
         return [], "缺少 mpId"
     articles = []
@@ -293,7 +297,7 @@ def fetch_articles(mp_id, cookie="", max_pages=3, page_interval=1.0,
             if code == -2041:
                 # urllib 被风控 → 改用浏览器同源 fetch 兜底
                 arts2, st2 = fetch_articles_playwright(
-                    mp_id, COOKIE_FILE, max_pages, page_interval, cutoff_date)
+                    mp_id, max_pages, page_interval, cutoff_date)
                 if arts2:
                     return arts2, st2
             return articles, f"接口错误 errCode={code} {payload.get('errMsg', '')} {hint}".strip()
@@ -321,7 +325,7 @@ def fetch_articles(mp_id, cookie="", max_pages=3, page_interval=1.0,
     return uniq, f"获取 {len(uniq)} 篇"
 
 
-def fetch_wechat_weread_batch(sources, cookie_file=COOKIE_FILE, max_pages=3,
+def fetch_wechat_weread_batch(sources, max_pages=3,
                               account_interval=6.0, page_interval=1.0,
                               cutoff_date=None):
     """一次浏览器会话，批量抓取多个公众号（标题 + 原文链接 + 日期）。
@@ -330,7 +334,7 @@ def fetch_wechat_weread_batch(sources, cookie_file=COOKIE_FILE, max_pages=3,
     Playwright，并在账号之间留足间隔（account_interval），显著降低
     -2014（请求频率过高）限频概率；同时规避 urllib 通道对部分 mp_id
     误报 -2003（参数格式错误）的问题——浏览器同源请求带完整会话指纹，
-    服务端能正确识别 mpId。
+    服务端能正确识别 mpId。登录态从 private_config.json 读取。
 
     :param sources: list[dict]，每项需含 mp_id / id / name / category
     :return: ( {source_id: [article, ...]}, 描述 )
@@ -340,10 +344,9 @@ def fetch_wechat_weread_batch(sources, cookie_file=COOKIE_FILE, max_pages=3,
     except ImportError:
         return {}, ("未安装 Playwright（pip install playwright && "
                     "playwright install chromium）")
-    if not os.path.exists(cookie_file):
-        return {}, f"登录态文件不存在: {cookie_file}"
-    with open(cookie_file, encoding="utf-8") as f:
-        cookies = json.load(f).get("cookies", [])
+    cookies = get_weread_cookies()
+    if not cookies:
+        return {}, "private_config.json 中无微信读书登录态（请先运行 login）"
     mp_list = [(s.get("mp_id", ""), s) for s in sources if s.get("mp_id")]
     if not mp_list:
         return {}, "没有有效的 mp_id"
@@ -485,7 +488,7 @@ def _qr_expired(page):
     return False
 
 
-def login_via_playwright(cookie_file=COOKIE_FILE, timeout=None, headed=False):
+def login_via_playwright(timeout=None, headed=False):
     """打开微信读书登录二维码 → 手机微信扫码 → 保存登录态。
 
     无需公众号账号：任何微信用户扫码即可（本方案相对其他路线的最大优势）。
@@ -567,8 +570,8 @@ def login_via_playwright(cookie_file=COOKIE_FILE, timeout=None, headed=False):
             return False
         vid = next((c["value"] for c in cookies
                     if c.get("name") in ("wr_vid", "vid") and c.get("value")), "")
-        save_login(cookies, cookie_file)
-        print(f"[OK] 登录成功！vid={vid[:12]}... 登录态已保存到 {cookie_file}")
+        save_login(cookies)
+        print(f"[OK] 登录成功！vid={vid[:12]}... 登录态已保存到 private_config.json")
         print("     提示：登录态通常可维持数周；失效时重跑 login 即可。")
         return True
 

@@ -36,12 +36,14 @@ categories:
     keywords: []
 
 # ---------- 大模型摘要（可选）----------
-# enabled=false 或 api_key 为空时，自动使用“抽取式摘要”兜底（免费离线）。
+# enabled=false 或 private_config.json 中 llm_api_key 为空时，自动使用
+# “抽取式摘要”兜底（免费离线）。api_key 不再写在这里，而是放在项目根目录的
+# private_config.json（该文件已 gitignore，不入库）。详见 README「隐私与配置」。
 # provider 支持任意 OpenAI 兼容接口（含各大模型厂商的兼容端点）。
 llm:
   enabled: false
   base_url: "https://api.openai.com/v1"
-  api_key: ""                 # 填入你的 key；留空即走兜底
+  # api_key 已移至 private_config.json（本地隐私文件），此处不再保存密钥
   model: "gpt-4o-mini"
   timeout: 30
 
@@ -134,7 +136,7 @@ sources:
   # 微信公众号源（微信读书通道：标题 + 原文链接 + 日期）
   # 前置：在 daily_digest/ 目录运行一次
   #        python wechat_weread.py login
-  #      用手机微信扫码，登录态自动存到 wechat_weread_cookies.json
+  #      用手机微信扫码，登录态自动存到项目根目录的 private_config.json
   # 启用每个源只需把 mp_id 填成「该号在微信读书里的 MP_WXS_xxxx」：
   #   - 在微信读书 APP/网页 打开该公众号 → 分享/复制链接 → 链接里含 MP_WXS_xxxx
   #   - 或把分享链接发给 AI，由它自动提取 mp_id

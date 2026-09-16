@@ -1,0 +1,8 @@
+{
+  "_comment": "本文件是 private_config.json 的模板。复制为 private_config.json 后填入你自己的隐私内容；private_config.json 已被 .gitignore 忽略，不会入库。所有需要隐私的步骤都从 private_config.json 读取，不再有独立的 cookie / key 文件。",
+  "llm_api_key": "",
+  "weread_cookies": [],
+  "weread_vid": "",
+  "weread_saved_at": "",
+  "weread_cookie_raw": ""
+}

@@ -103,14 +103,18 @@ categories:
 
 ### 2.4 大模型摘要（可选）
 
+API Key 不再写在 config.yaml，而是放在仓库根目录的 **`private_config.json`**
+（已 gitignore，不入库）。先在 `private_config.json` 填入 `llm_api_key`，
+再在 config.yaml 开启：
+
 ```yaml
 llm:
   enabled: true
   base_url: "https://api.openai.com/v1"   # 任意 OpenAI 兼容端点
-  api_key: "sk-..."
   model: "gpt-4o-mini"
 ```
-不填 `api_key` 则自动使用**抽取式摘要**（取正文前几句），完全免费离线。
+`private_config.json` 中 `llm_api_key` 为空则自动使用**抽取式摘要**
+（取正文前几句），完全免费离线。
 
 ## 3. 运行
 

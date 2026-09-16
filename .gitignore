@@ -46,13 +46,16 @@ Thumbs.db
 .workbuddy/
 daily_digest/.workbuddy/
 
-# 登录凭证与截图
-*_cookies.json
+# ---------------------------------------------------------------------------
+# 隐私文件（本项目唯一需要忽略的隐私内容；所有隐私都集中在这一份文件里）
+# 任何步骤都从 private_config.json 读取隐私，不再有零散的 cookie / key 文件。
+# 模板 private_config.example.json 可入库；真正的 private_config.json 不入库。
+# ---------------------------------------------------------------------------
+private_config.json
+
+# 本地登录二维码 / 页面截图（由 login 生成，非隐私但无需入库）
 weread_login_*.png
 
 # 运行日志（保持本地，不入库）
 daily_digest/*.txt
 !daily_digest/requirements.txt
-
-# 含密钥的部署配置（本地保留，自行填密码）
-wechat_rss/we-mp-rss/docker-compose.yml

@@ -165,15 +165,14 @@ def fetch_wechat_weread(source):
         print(f"[warn] {source.get('id')} 未配置 mp_id（请在 config 填入 MP_WXS_xxxx，"
               f"可从微信读书分享链接里提取），已跳过")
         return []
-    here = os.path.dirname(os.path.abspath(__file__))
-    cookie_file = source.get("cookie_file") or os.path.join(here, "wechat_weread_cookies.json")
-    if not os.path.exists(cookie_file):
-        print(f"[warn] {source.get('id')} 未找到登录态 {cookie_file}，请先运行 "
-              f"python wechat_weread.py login")
-        return []
     try:
         from wechat_weread import load_login, fetch_articles
-        cookie, vid, desc = load_login(cookie_file)
+        from private_config import exists as _pc_exists
+        if not _pc_exists():
+            print(f"[warn] {source.get('id')} 未找到 private_config.json，"
+                  f"请先运行 python wechat_weread.py login")
+            return []
+        cookie, vid, desc = load_login()
         if not cookie:
             print(f"[warn] {source.get('id')} 登录态为空（{desc}），请重登")
             return []
