@@ -94,64 +94,6 @@ def fetch_wechat_manual(source):
     return out
 
 
-def fetch_wechat_cookie(source):
-    """② 轻量方案：用 cookie + __biz 抓单公众号文章列表（标题+链接）。
-
-    依赖 wechat_lite.py（标准库实现）与 cookie_helper.py（cookie 管理）。
-    配置示例见 config.yaml 的 wechat_cookie 源。
-    """
-    import os
-    biz = source.get("biz") or ""
-    if not biz or str(biz).startswith("REPLACE"):
-        # 允许直接贴该号任意一篇文章链接，自动解析 __biz
-        biz_url = source.get("biz_url") or ""
-        try:
-            from wechat_lite import extract_biz_from_url
-            biz = extract_biz_from_url(biz_url) or ""
-        except Exception:  # noqa: BLE001
-            biz = ""
-    if not biz:
-        print(f"[warn] {source.get('id')} 未配置有效 __biz/biz_url，已跳过"
-              f"（请在 config 填入真实 __biz 或该号任一文章链接）")
-        return []
-    # cookie 文件：优先源内 cookie_file，其次默认位置
-    here = os.path.dirname(os.path.abspath(__file__))
-    cookie_file = source.get("cookie_file") or os.path.join(here, "wechat_cookies.json")
-    try:
-        from cookie_helper import load_cookie, validate_cookie
-        cookie, _ = load_cookie(cookie_file)
-    except Exception as e:  # noqa: BLE001
-        print(f"[warn] {source.get('id')} 读取 cookie 失败: {e}")
-        return []
-    if not cookie:
-        print(f"[warn] {source.get('id')} cookie 为空，请先运行 cookie_helper.py login")
-        return []
-    ok, msg = validate_cookie(cookie, biz)
-    if not ok:
-        print(f"[warn] {source.get('id')} cookie 校验未通过: {msg}（请重登）")
-        return []
-    try:
-        from wechat_lite import fetch_account
-        max_messages = source.get("max_messages", 20)
-        arts, status = fetch_account(cookie, biz, max_messages=max_messages, delay=1.0)
-    except Exception as e:  # noqa: BLE001
-        print(f"[warn] {source.get('id')} 抓取失败: {e}")
-        return []
-    out = []
-    for a in arts:
-        out.append({
-            "title": a["title"],
-            "link": _norm_link(a["url"]),
-            "source": source["name"],
-            "site": source.get("site", "微信公众号"),
-            "source_id": source["id"],
-            "published": a["datetime"],
-            "snippet": a.get("digest", ""),
-            "category": source.get("category", ""),
-        })
-    return out
-
-
 def fetch_wechat_weread(source):
     """微信读书通道：用 mpId(形如 MP_WXS_xxxx) 抓单公众号文章（标题+原文链接+日期）。
 
@@ -265,7 +207,6 @@ DISPATCH = {
     "website_html": fetch_website_html,
     "wechat_rss": fetch_wechat_rss,
     "wechat_manual": fetch_wechat_manual,
-    "wechat_cookie": fetch_wechat_cookie,
     "weread": fetch_wechat_weread,
 }
 
